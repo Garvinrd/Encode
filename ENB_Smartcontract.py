@@ -2,6 +2,7 @@ from algosdk.v2client import algod
 from algosdk.future.transaction import AssetConfigTxn, wait_for_confirmation
 from algosdk.mnemonic import to_private_key
 import json
+import requests
 
 algod_address = "https://testnet-api.algonode.cloud"
 algod_client = algod.AlgodClient("", algod_address)
@@ -43,4 +44,30 @@ except Exception as err:
 print("Transaction information: {}".format(
     json.dumps(confirmed_txn, indent=4)))   
 
-#"asset-index": 148688692    
+#get the ASA ID
+asa_id = confirmed_txn
+
+# deploy the smart contract
+smart_contract = f"""
+txn AssetID {asa_id}
+txn AssetENB "ENB"
+"""
+
+# encode the smart contract
+smart_contract_encoded = bytes(smart_contract, 'ascii').hex()
+
+# define the transaction parameters
+tx_params = {
+    "from": asset_creator_address,
+    "note": smart_contract_encoded,
+    "fee": 1000,
+    "flat_fee": True
+}
+
+# sign the transaction
+response = requests.post("https://testnet-api.algonode.cloud", json=tx_params, headers={'Content-type': 'application/json'})
+
+# get the transaction ID
+tx_id = response.json()["txId"]
+
+print("Smart contract deployed successfully with txid: ", tx_id)
